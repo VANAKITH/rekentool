@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rekentool rente op rente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F2F4EF;
+    --panel: #FFFFFF;
+    --ink: #1B2E27;
+    --muted: #55665E;
+    --line: #D5DCD6;
+    --green: #0E7C5A;
+    --slate: #6B7B84;
+    --plum: #8A4F7D;
+    --mark: #D9A21B;
+    --focus: #0E7C5A;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101815;
+      --panel: #16211C;
+      --ink: #E6EEE9;
+      --muted: #A3B3AB;
+      --line: #2B3A33;
+      --green: #3FC49A;
+      --slate: #9AAAB2;
+      --plum: #D29BC6;
+      --mark: #F0C04A;
+      --focus: #3FC49A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101815;
+    --panel: #16211C;
+    --ink: #E6EEE9;
+    --muted: #A3B3AB;
+    --line: #2B3A33;
+    --green: #3FC49A;
+    --slate: #9AAAB2;
+    --plum: #D29BC6;
+    --mark: #F0C04A;
+    --focus: #3FC49A;
+  }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Instrument Sans", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+  }
+  header { margin-bottom: 28px; max-width: 46rem; }
+  h1 {
+    font-family: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    line-height: 1.02;
+    letter-spacing: -0.02em;
+    margin: 0 0 10px;
+  }
+  header p { margin: 0; color: var(--muted); max-width: 38rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  @media (min-width: 880px) {
+    .grid { grid-template-columns: 320px 1fr; gap: 40px; align-items: start; }
+  }
+
+  .controls {
+    border-left: 4px solid var(--green);
+    padding: 4px 0 4px 18px;
+  }
+  .field { margin-bottom: 22px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  label { font-weight: 600; }
+  .num {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .num input {
+    width: 6em;
+    font: inherit;
+    font-weight: 600;
+    text-align: right;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 8px;
+  }
+  .num span { color: var(--muted); }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--green);
+    margin: 0;
+    height: 28px;
+  }
+  input:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .hint { font-size: 0.85rem; color: var(--muted); margin: 2px 0 0; }
+
+  .result {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 20px 16px;
+  }
+  @media (max-width: 520px) { .result { padding: 16px 14px 12px; } .wrap { padding: 22px 16px 40px; } }
+  .lead {
+    font-family: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    font-size: clamp(1.25rem, 3.4vw, 1.7rem);
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0 0 14px;
+    max-width: 34rem;
+  }
+  .lead strong { color: var(--green); font-weight: 800; white-space: nowrap; }
+  .facts { margin: 0 0 18px; padding: 0; list-style: none; max-width: 40rem; }
+  .facts li { margin: 0 0 8px; padding-left: 18px; position: relative; }
+  .facts li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--c, var(--muted));
+  }
+  .facts strong { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .chart-box { position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
+  .readout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 0.92rem;
+    font-variant-numeric: tabular-nums;
+    margin-top: 8px;
+    min-height: 1.5em;
+  }
+  .readout b { font-weight: 600; }
+  .key { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 18px; height: 0; border-top: 3px solid var(--c); display: inline-block; }
+  .swatch.dash { border-top-style: dashed; }
+  .swatch.dot { border-top-style: dotted; }
+
+  details {
+    margin-top: 22px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+  }
+  summary { cursor: pointer; font-weight: 600; }
+  summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
+  .table-scroll { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; min-width: 460px; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+  th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-weight: 600; color: var(--muted); position: sticky; top: 0; background: var(--panel); }
+
+  footer { margin-top: 28px; color: var(--muted); font-size: 0.85rem; max-width: 46rem; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .pulse { animation: pulse 0.5s ease-out; }
+    @keyframes pulse { from { opacity: 0.35; } to { opacity: 1; } }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Rente op rente</h1>
+    <p>Verschuif de schuifjes of typ een waarde. De grafiek toont hoe je kapitaal groeit met samengestelde intrest, met enkelvoudige intrest en in koopkracht van vandaag. Tik of sleep in de grafiek om een jaar af te lezen.</p>
+  </header>
+
+  <div class="grid">
+    <section class="controls" aria-label="Invoer">
+      <div class="field">
+        <div class="field-top">
+          <label for="k0n">Beginkapitaal</label>
+          <span class="num"><span>€</span><input id="k0n" type="number" inputmode="decimal" min="0" max="1000000" step="1" value="1000"></span>
+        </div>
+        <input id="k0r" type="range" min="100" max="50000" step="100" value="1000" aria-label="Beginkapitaal">
+      </div>
+      <div class="field">
+        <div class="field-top">
+          <label for="in">Rentevoet per jaar</label>
+          <span class="num"><input id="in" type="number" inputmode="decimal" min="0" max="30" step="0.01" value="3"><span>%</span></span>
+        </div>
+        <input id="ir" type="range" min="0" max="15" step="0.1" value="3" aria-label="Rentevoet per jaar">
+      </div>
+      <div class="field">
+        <div class="field-top">
+          <label for="nn">Looptijd</label>
+          <span class="num"><input id="nn" type="number" inputmode="numeric" min="1" max="60" step="1" value="20"><span>jaar</span></span>
+        </div>
+        <input id="nr" type="range" min="1" max="60" step="1" value="20" aria-label="Looptijd in jaren">
+      </div>
+      <div class="field">
+        <div class="field-top">
+          <label for="pn">Inflatie per jaar</label>
+          <span class="num"><input id="pn" type="number" inputmode="decimal" min="0" max="30" step="0.01" value="2"><span>%</span></span>
+        </div>
+        <input id="pr" type="range" min="0" max="10" step="0.1" value="2" aria-label="Inflatie per jaar">
+        <p class="hint">Zet de inflatie op 0 om alleen met intrest te rekenen.</p>
+      </div>
+    </section>
+
+    <section class="result" aria-live="polite">
+      <p class="lead" id="lead"></p>
+      <ul class="facts" id="facts"></ul>
+
+      <div class="chart-box">
+        <svg class="chart" id="chart" viewBox="0 0 640 340" role="img" aria-label="Grafiek van het kapitaal per jaar"></svg>
+        <div class="readout" id="readout"></div>
+      </div>
+
+      <details>
+        <summary>Toon de waarden per jaar</summary>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Jaar</th><th>Samengesteld</th><th>Enkelvoudig</th><th>Koopkracht</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  </div>
+
+  <footer>
+    Alle bedragen worden exact berekend en pas bij het tonen afgerond op de cent. Samengestelde intrest: K<sub>n</sub> = K<sub>0</sub>·(1 + i)<sup>n</sup>. Enkelvoudige intrest: K<sub>n</sub> = K<sub>0</sub>·(1 + i·n). Koopkracht: K<sub>n</sub> / (1 + π)<sup>n</sup>.
+  </footer>
+</div>
+
+<script>
+(function () {
+  var eur = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var eur0 = new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+  var dec2 = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var dec1 = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+  var pct = function (x) { return new Intl.NumberFormat('nl-BE', { maximumFractionDigits: 2 }).format(x) + '%'; };
+
+  var pairs = [
+    ['k0n', 'k0r'], ['in', 'ir'], ['nn', 'nr'], ['pn', 'pr']
+  ];
+  var el = function (id) { return document.getElementById(id); };
+  var state = { k0: 1000, p: 3, n: 20, inf: 2 };
+  var scrubYear = null;
+
+  function readNum(v) {
+    if (typeof v !== 'string') return NaN;
+    return parseFloat(v.replace(',', '.'));
+  }
+  function clamp(x, a, b) { return Math.min(b, Math.max(a, x)); }
+
+  function sync(fromId) {
+    var k0 = readNum(el('k0n').value), p = readNum(el('in').value), n = readNum(el('nn').value), inf = readNum(el('pn').value);
+    if (fromId === 'k0r') k0 = readNum(el('k0r').value);
+    if (fromId === 'ir') p = readNum(el('ir').value);
+    if (fromId === 'nr') n = readNum(el('nr').value);
+    if (fromId === 'pr') inf = readNum(el('pr').value);
+    if (!isFinite(k0) || k0 < 0) k0 = 0;
+    if (!isFinite(p) || p < 0) p = 0;
+    if (!isFinite(n) || n < 1) n = 1;
+    if (!isFinite(inf) || inf < 0) inf = 0;
+    k0 = clamp(k0, 0, 1000000);
+    p = clamp(p, 0, 30);
+    n = clamp(Math.round(n), 1, 60);
+    inf = clamp(inf, 0, 30);
+    state = { k0: k0, p: p, n: n, inf: inf };
+    if (fromId !== 'k0n') el('k0n').value = String(k0);
+    if (fromId !== 'in') el('in').value = String(p);
+    if (fromId !== 'nn') el('nn').value = String(n);
+    if (fromId !== 'pn') el('pn').value = String(inf);
+    el('k0r').value = String(clamp(k0, 100, 50000));
+    el('ir').value = String(clamp(p, 0, 15));
+    el('nr').value = String(n);
+    el('pr').value = String(clamp(inf, 0, 10));
+    scrubYear = null;
+    render();
+  }
+
+  function values(t) {
+    var i = state.p / 100, pi = state.inf / 100;
+    var comp = state.k0 * Math.pow(1 + i, t);
+    var simp = state.k0 * (1 + i * t);
+    var real = comp / Math.pow(1 + pi, t);
+    return { comp: comp, simp: simp, real: real };
+  }
+
+  function niceStep(max) {
+    var raw = max / 5;
+    var mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    var f = raw / mag;
+    var step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+    return step * mag;
+  }
+
+  function render() {
+    var n = state.n, i = state.p / 100;
+    var end = values(n);
+
+    el('lead').innerHTML = 'Na ' + n + (n === 1 ? ' jaar' : ' jaar') + ' staat er <strong>' + eur.format(end.comp) + '</strong> op je rekening.';
+
+    var facts = [];
+    var diff = end.comp - end.simp;
+    facts.push('<li style="--c: var(--slate)">Met enkelvoudige intrest zou dat <strong>' + eur.format(end.simp) + '</strong> zijn. Rente op rente levert je dus <strong>' + eur.format(diff) + '</strong> extra op.</li>');
+    if (state.inf > 0) {
+      facts.push('<li style="--c: var(--plum)">Met ' + pct(state.inf) + ' inflatie per jaar is ' + eur.format(end.comp) + ' dan evenveel waard als <strong>' + eur.format(end.real) + '</strong> vandaag.</li>');
+    } else {
+      facts.push('<li style="--c: var(--plum)">Zonder inflatie is je koopkracht gelijk aan het bedrag op je rekening.</li>');
+    }
+    if (i > 0) {
+      var t2 = Math.log(2) / Math.log(1 + i);
+      var r72 = 72 / state.p;
+      facts.push('<li style="--c: var(--green)">Je kapitaal verdubbelt na <strong>' + dec2.format(t2) + ' jaar</strong>, dus na ' + Math.ceil(t2 - 1e-9) + ' volle jaren. De regel van 72 schat <strong>' + dec2.format(r72) + ' jaar</strong>.</li>');
+    } else {
+      facts.push('<li style="--c: var(--green)">Bij 0% intrest groeit je kapitaal niet.</li>');
+    }
+    el('facts').innerHTML = facts.join('');
+
+    drawChart();
+    drawTable();
+  }
+
+  var W = 640, H = 340, L = 70, R = 18, T = 16, B = 48;
+
+  function sizeChart() {
+    var box = el('chart').parentNode.clientWidth || 640;
+    W = Math.round(clamp(box, 280, 760));
+    H = W < 520 ? Math.round(W * 0.78) : Math.round(W * 0.53);
+    L = W < 520 ? 62 : 70;
+    el('chart').setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  }
+
+  function drawChart() {
+    sizeChart();
+    var n = state.n;
+    var maxY = 0;
+    for (var t = 0; t <= n; t++) {
+      var v = values(t);
+      maxY = Math.max(maxY, v.comp, v.simp, v.real);
+    }
+    if (maxY <= 0) maxY = 1;
+    var step = niceStep(maxY);
+    var top = Math.ceil(maxY / step) * step;
+    var x = function (t) { return L + (W - L - R) * (t / n); };
+    var y = function (v) { return T + (H - T - B) * (1 - v / top); };
+
+    var s = '';
+    for (var g = 0; g <= top + 1e-9; g += step) {
+      var gy = y(g).toFixed(1);
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>';
+      s += '<text x="' + (L - 8) + '" y="' + (+gy + 4) + '" text-anchor="end" font-size="12" fill="var(--muted)">' + eur0.format(g) + '</text>';
+    }
+    var xs = n <= 10 ? 1 : n <= 20 ? 2 : n <= 40 ? 5 : 10;
+    for (var tx = 0; tx <= n; tx += xs) {
+      s += '<text x="' + x(tx).toFixed(1) + '" y="' + (H - B + 20) + '" text-anchor="middle" font-size="12" fill="var(--muted)">' + tx + '</text>';
+    }
+    s += '<text x="' + (L + (W - L - R) / 2).toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle" font-size="12" fill="var(--muted)">looptijd in jaren</text>';
+
+    function path(key) {
+      var d = '';
+      var steps = Math.max(n * 4, 60);
+      for (var k = 0; k <= steps; k++) {
+        var tt = n * k / steps;
+        var v = values(tt)[key];
+        d += (k === 0 ? 'M' : 'L') + x(tt).toFixed(1) + ' ' + y(v).toFixed(1);
+      }
+      return d;
+    }
+    if (state.inf > 0) {
+      s += '<path d="' + path('real') + '" fill="none" stroke="var(--plum)" stroke-width="2.5" stroke-dasharray="2 5" stroke-linecap="round"/>';
+    }
+    s += '<path d="' + path('simp') + '" fill="none" stroke="var(--slate)" stroke-width="2.5" stroke-dasharray="8 6"/>';
+    s += '<path d="' + path('comp') + '" fill="none" stroke="var(--green)" stroke-width="3.5" stroke-linejoin="round"/>';
+
+    var sy = scrubYear === null ? n : scrubYear;
+    var sv = values(sy);
+    var sx = x(sy).toFixed(1);
+    s += '<line x1="' + sx + '" x2="' + sx + '" y1="' + T + '" y2="' + (H - B) + '" stroke="var(--mark)" stroke-width="2"/>';
+    s += '<circle cx="' + sx + '" cy="' + y(sv.comp).toFixed(1) + '" r="5.5" fill="var(--green)" stroke="var(--panel)" stroke-width="2"/>';
+    s += '<circle cx="' + sx + '" cy="' + y(sv.simp).toFixed(1) + '" r="5" fill="var(--slate)" stroke="var(--panel)" stroke-width="2"/>';
+    if (state.inf > 0) s += '<circle cx="' + sx + '" cy="' + y(sv.real).toFixed(1) + '" r="5" fill="var(--plum)" stroke="var(--panel)" stroke-width="2"/>';
+    s += '<rect x="' + L + '" y="' + T + '" width="' + (W - L - R) + '" height="' + (H - T - B) + '" fill="transparent" id="hit"/>';
+    el('chart').innerHTML = s;
+
+    var ro = '<span><b>Jaar ' + sy + '</b></span>';
+    ro += '<span class="key"><span class="swatch" style="--c: var(--green)"></span>Samengesteld ' + eur.format(sv.comp) + '</span>';
+    ro += '<span class="key"><span class="swatch dash" style="--c: var(--slate)"></span>Enkelvoudig ' + eur.format(sv.simp) + '</span>';
+    if (state.inf > 0) ro += '<span class="key"><span class="swatch dot" style="--c: var(--plum)"></span>Koopkracht ' + eur.format(sv.real) + '</span>';
+    el('readout').innerHTML = ro;
+  }
+
+  function drawTable() {
+    var rows = '';
+    for (var t = 0; t <= state.n; t++) {
+      var v = values(t);
+      rows += '<tr><td>' + t + '</td><td>' + eur.format(v.comp) + '</td><td>' + eur.format(v.simp) + '</td><td>' + eur.format(v.real) + '</td></tr>';
+    }
+    el('tbody').innerHTML = rows;
+  }
+
+  function scrubFromEvent(ev) {
+    var svg = el('chart');
+    var rect = svg.getBoundingClientRect();
+    var px = (ev.clientX - rect.left) / rect.width * W;
+    var frac = (px - L) / (W - L - R);
+    var yr = Math.round(clamp(frac, 0, 1) * state.n);
+    if (yr !== scrubYear) { scrubYear = yr; drawChart(); }
+  }
+  var dragging = false;
+  el('chart').addEventListener('pointerdown', function (ev) { dragging = true; scrubFromEvent(ev); });
+  el('chart').addEventListener('pointermove', function (ev) { if (dragging || ev.pointerType === 'mouse') scrubFromEvent(ev); });
+  window.addEventListener('pointerup', function () { dragging = false; });
+  el('chart').addEventListener('pointerleave', function (ev) { if (ev.pointerType === 'mouse') { scrubYear = null; drawChart(); } });
+
+  var rt;
+  window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(drawChart, 80); });
+
+  pairs.forEach(function (p) {
+    el(p[0]).addEventListener('input', function () { sync(p[0]); });
+    el(p[1]).addEventListener('input', function () { sync(p[1]); });
+  });
+
+  sync('init');
+})();
+</script>
+</body>
+</html>
